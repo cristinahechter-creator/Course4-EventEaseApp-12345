@@ -1,0 +1,55 @@
+@implements IAsyncDisposable
+
+<div class="navbar navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">EventEaseApp</a>
+        <button class="navbar-toggler" type="button" @onclick="ToggleNavMenu" aria-controls="navbarNav" aria-expanded="@navMenuCssClass.Contains("show")" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="@navMenuCssClass" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/" @onclick="@(() => CloseNavMenu())">
+                        <span class="oi oi-home"></span> Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/events" @onclick="@(() => CloseNavMenu())">
+                        <span class="oi oi-list"></span> Browse Events
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/events/manage" @onclick="@(() => CloseNavMenu())">
+                        <span class="oi oi-pencil"></span> Manage Events
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/attendance" @onclick="@(() => CloseNavMenu())">
+                        <span class="oi oi-graph"></span> Attendance
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? navMenuCssClass => collapseNavMenu ? "collapse navbar-collapse" : "collapse navbar-collapse show";
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void CloseNavMenu()
+    {
+        collapseNavMenu = true;
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        await ValueTask.CompletedTask;
+    }
+}
