@@ -8,11 +8,7 @@
 <div class="container mt-4">
     <h1 class="mb-4">Attendance Tracker</h1>
 
-    @if (events == null)
-    {
-        <div class="alert alert-info">Loading attendance data...</div>
-    }
-    else if (!events.Any())
+    @if (events == null || !events.Any())
     {
         <div class="alert alert-warning">No events found.</div>
     }
@@ -98,10 +94,11 @@
 </div>
 
 @code {
-    private List<EventItem> events;
+    private List<EventItem> events = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await EventService.LoadAsync();
         events = EventService.GetEvents().OrderByDescending(e => e.AttendanceCount).ToList();
     }
 }
