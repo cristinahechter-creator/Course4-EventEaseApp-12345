@@ -1,0 +1,107 @@
+@page "/attendance"
+@using EventEaseApp.Data
+@using EventEaseApp.Models
+@inject IEventService EventService
+
+<PageTitle>Attendance Tracker</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Attendance Tracker</h1>
+
+    @if (events == null)
+    {
+        <div class="alert alert-info">Loading attendance data...</div>
+    }
+    else if (!events.Any())
+    {
+        <div class="alert alert-warning">No events found.</div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Events</h5>
+                        <p class="display-4 text-primary">@events.Count()</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Attendees</h5>
+                        <p class="display-4 text-success">@events.Sum(e => e.AttendanceCount)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Average Attendance</h5>
+                        <p class="display-4 text-info">@(events.Any() ? Math.Round((double)events.Sum(e => e.AttendanceCount) / events.Count(), 1) : 0)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Event Attendance Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Event Name</th>
+                                <th>Date</th>
+                                <th>Location</th>
+                                <th>Attendance</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var e in events)
+                            {
+                                <tr>
+                                    <td>
+                                        <a href="/event-details/@e.Id" class="text-decoration-none">@e.Name</a>
+                                    </td>
+                                    <td>@e.Date.ToString("MMM dd, yyyy")</td>
+                                    <td>@e.Location</td>
+                                    <td>
+                                        <span class="badge bg-primary">@e.AttendanceCount attendees</span>
+                                    </td>
+                                    <td>
+                                        @if (e.AttendanceCount > 0)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">No Attendance</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 mb-4">
+            <a href="/" class="btn btn-outline-secondary">Back to Home</a>
+        </div>
+    }
+</div>
+
+@code {
+    private List<EventItem> events;
+
+    protected override void OnInitialized()
+    {
+        events = EventService.GetEvents().OrderByDescending(e => e.AttendanceCount).ToList();
+    }
+}

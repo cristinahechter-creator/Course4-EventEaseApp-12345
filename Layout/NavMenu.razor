@@ -1,0 +1,82 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">EventEaseApp</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="counter">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/events">
+                <span class="bi bi-calendar-event" aria-hidden="true"></span> Events
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/events/manage">
+                <span class="bi bi-gear" aria-hidden="true"></span> Manage Events
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/attendance">
+                <span class="bi bi-bar-chart" aria-hidden="true"></span> Attendance
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="weather">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            </NavLink>
+        </div>
+        <div class="nav-item px-3 mt-3">
+            @if (UserSession.IsActive)
+            {
+                <div class="text-white small px-2 py-2 bg-secondary rounded">
+                    Session: <strong>@UserSession.Name</strong> <br />
+                    <span class="text-muted">@UserSession.Email</span>
+                </div>
+            }
+            else
+            {
+                <div class="text-white small px-2 py-2 bg-dark rounded">No active session</div>
+            }
+        </div>
+    </nav>
+</div>
+
+@inject EventEaseApp.Data.IUserSessionService UserSession
+
+@code {
+    private bool collapseNavMenu = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UserSession.LoadAsync();
+        UserSession.SessionChanged += OnSessionChanged;
+    }
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void OnSessionChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        UserSession.SessionChanged -= OnSessionChanged;
+    }
+}

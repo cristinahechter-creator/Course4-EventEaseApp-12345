@@ -1,0 +1,242 @@
+<div class="event-card p-3 border rounded shadow-sm bg-white">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="flex-grow-1 me-3">
+            <label class="form-label small">Event Name</label>
+            <input class="form-control mb-2 @(NameError != null ? "is-invalid" : "")" 
+                   maxlength="@MaxNameLength"
+                   value="@localName" 
+                   @oninput="OnNameInput" 
+                   placeholder="Enter event name" />
+            @if (NameError != null)
+            {
+                <div class="text-danger small mt-1">@NameError</div>
+            }
+            <div class="text-muted small">@localName.Length / @MaxNameLength</div>
+            @if (localCompleted)
+            {
+                <span class="badge bg-success mt-2">Completed</span>
+            }
+        </div>
+
+        <div class="text-end">
+            <label class="form-label small">Event Date</label>
+            <input class="form-control @(DateError != null ? "is-invalid" : "")" 
+                   type="date" 
+                   value="@localDate.ToString("yyyy-MM-dd")" 
+                   @onchange="OnDateChanged" />
+            @if (DateError != null)
+            {
+                <div class="text-danger small mt-1">@DateError</div>
+            }
+            <div class="form-check mt-2 text-end">
+                <input class="form-check-input" type="checkbox" checked="@localCompleted" @onchange="OnCompletedChanged" id="completed-@_id" />
+                <label class="form-check-label small" for="completed-@_id">Completed</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-secondary mt-2">
+        <label class="form-label small mb-1">Location</label>
+        <input class="form-control @(LocationError != null ? "is-invalid" : "")" 
+               maxlength="@MaxLocationLength"
+               value="@localLocation" 
+               @oninput="OnLocationInput" 
+               placeholder="Enter location" />
+        @if (LocationError != null)
+        {
+            <div class="text-danger small mt-1">@LocationError</div>
+        }
+        <div class="text-muted small">@localLocation.Length / @MaxLocationLength</div>
+    </div>
+</div>
+
+@code {
+    private string localName = string.Empty;
+    private DateTime localDate = DateTime.Today;
+    private string localLocation = string.Empty;
+    private bool localCompleted;
+    private readonly string _id = Guid.NewGuid().ToString("N");
+    private Dictionary<string, string> validationErrors = new();
+
+    // Validation constraints
+    private const int MinNameLength = 1;
+    private const int MaxNameLength = 100;
+    private const int MinLocationLength = 1;
+    private const int MaxLocationLength = 150;
+    private static readonly DateTime MinEventDate = DateTime.Today.AddYears(-1);
+    private static readonly DateTime MaxEventDate = DateTime.Today.AddYears(10);
+
+    [Parameter]
+    public string EventName { get; set; } = "Untitled Event";
+    [Parameter]
+    public EventCallback<string> EventNameChanged { get; set; }
+
+    [Parameter]
+    public DateTime EventDate { get; set; } = DateTime.Today;
+    [Parameter]
+    public EventCallback<DateTime> EventDateChanged { get; set; }
+
+    [Parameter]
+    public string Location { get; set; } = "TBD";
+    [Parameter]
+    public EventCallback<string> LocationChanged { get; set; }
+
+    [Parameter]
+    public bool IsCompleted { get; set; }
+    [Parameter]
+    public EventCallback<bool> IsCompletedChanged { get; set; }
+
+    // Cached error lookups
+    private string? NameError => validationErrors.TryGetValue("EventName", out var err) ? err : null;
+    private string? LocationError => validationErrors.TryGetValue("Location", out var err) ? err : null;
+    private string? DateError => validationErrors.TryGetValue("EventDate", out var err) ? err : null;
+
+    protected override void OnParametersSet()
+    {
+        localName = EventName ?? string.Empty;
+        localDate = EventDate;
+        localLocation = Location ?? string.Empty;
+        localCompleted = IsCompleted;
+        ValidateAll();
+    }
+
+    /// <summary>
+    /// Validates all event data and populates error messages
+    /// </summary>
+    private void ValidateAll()
+    {
+        validationErrors.Clear();
+        ValidateName();
+        ValidateLocation();
+        ValidateDate();
+    }
+
+    /// <summary>
+    /// Validates event name: required, length constraints, no excessive whitespace
+    /// </summary>
+    private bool ValidateName()
+    {
+        validationErrors.Remove("EventName");
+        
+        if (string.IsNullOrWhiteSpace(localName))
+        {
+            validationErrors["EventName"] = "Event name is required.";
+            return false;
+        }
+
+        var trimmedName = localName.Trim();
+        if (trimmedName.Length < MinNameLength)
+        {
+            validationErrors["EventName"] = $"Event name must have at least {MinNameLength} character.";
+            return false;
+        }
+
+        if (trimmedName.Length > MaxNameLength)
+        {
+            validationErrors["EventName"] = $"Event name cannot exceed {MaxNameLength} characters.";
+            return false;
+        }
+
+        if (!trimmedName.Any(c => char.IsLetterOrDigit(c)))
+        {
+            validationErrors["EventName"] = "Event name must contain at least one letter or number.";
+            return false;
+        }
+        
+        return true;
+    }
+
+    /// <summary>
+    /// Validates location: required, length constraints
+    /// </summary>
+    private bool ValidateLocation()
+    {
+        validationErrors.Remove("Location");
+        
+        if (string.IsNullOrWhiteSpace(localLocation))
+        {
+            validationErrors["Location"] = "Location is required.";
+            return false;
+        }
+
+        var trimmedLocation = localLocation.Trim();
+        if (trimmedLocation.Length < MinLocationLength)
+        {
+            validationErrors["Location"] = $"Location must have at least {MinLocationLength} character.";
+            return false;
+        }
+
+        if (trimmedLocation.Length > MaxLocationLength)
+        {
+            validationErrors["Location"] = $"Location cannot exceed {MaxLocationLength} characters.";
+            return false;
+        }
+        
+        return true;
+    }
+
+    /// <summary>
+    /// Validates event date: not null, within reasonable bounds
+    /// </summary>
+    private bool ValidateDate()
+    {
+        validationErrors.Remove("EventDate");
+        
+        if (localDate < MinEventDate || localDate > MaxEventDate)
+        {
+            validationErrors["EventDate"] = $"Date must be between {MinEventDate:yyyy-MM-dd} and {MaxEventDate:yyyy-MM-dd}.";
+            return false;
+        }
+        
+        return true;
+    }
+
+    private async Task OnNameInput(ChangeEventArgs e)
+    {
+        localName = e.Value?.ToString() ?? string.Empty;
+        if (ValidateName())
+        {
+            await EventNameChanged.InvokeAsync(localName.Trim());
+        }
+    }
+
+    private async Task OnLocationInput(ChangeEventArgs e)
+    {
+        localLocation = e.Value?.ToString() ?? string.Empty;
+        if (ValidateLocation())
+        {
+            await LocationChanged.InvokeAsync(localLocation.Trim());
+        }
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var dt))
+        {
+            localDate = dt;
+            if (ValidateDate())
+            {
+                await EventDateChanged.InvokeAsync(localDate);
+            }
+        }
+        else
+        {
+            validationErrors["EventDate"] = "Invalid date format.";
+        }
+    }
+
+    private async Task OnCompletedChanged(ChangeEventArgs e)
+    {
+        if (bool.TryParse(e.Value?.ToString(), out var b))
+        {
+            localCompleted = b;
+            await IsCompletedChanged.InvokeAsync(localCompleted);
+        }
+        else
+        {
+            // input checkbox sometimes sends "on"; toggle instead
+            localCompleted = !localCompleted;
+            await IsCompletedChanged.InvokeAsync(localCompleted);
+        }
+    }
+}

@@ -1,0 +1,88 @@
+@page "/events/{id:guid}/register"
+@using System.ComponentModel.DataAnnotations
+@using EventEaseApp.Data
+@using EventEaseApp.Models
+@inject IEventService EventService
+@inject IUserSessionService UserSession
+
+<PageTitle>Register</PageTitle>
+
+<div class="container py-4">
+    @if (eventItem is null)
+    {
+        <div class="alert alert-warning">Event not found.</div>
+        <a class="btn btn-secondary" href="/events">Back to events</a>
+    }
+    else
+    {
+        <h2 class="h5">Register for @eventItem.Name</h2>
+
+        @if (submitted)
+        {
+            <div class="alert alert-success">
+                Thanks, @registration.Name! You're registered with @registration.Email.
+            </div>
+            <a class="btn btn-secondary" href="/events">Back to events</a>
+        }
+        else
+        {
+            <EditForm Model="registration" OnValidSubmit="Submit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label" for="registrantName">Your name</label>
+                    <InputText id="registrantName" class="form-control" @bind-Value="registration.Name" />
+                    <ValidationMessage For="@(() => registration.Name)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="registrantEmail">Email address</label>
+                    <InputText id="registrantEmail" type="email" class="form-control" @bind-Value="registration.Email" />
+                    <ValidationMessage For="@(() => registration.Email)" />
+                </div>
+
+                <button class="btn btn-primary" type="submit">Submit registration</button>
+                <a class="btn btn-link ms-2" href="/events/@eventItem.Id">Back to details</a>
+            </EditForm>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid id { get; set; }
+
+    private EventItem? eventItem;
+    private RegistrationModel registration = new();
+    private bool submitted;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await EventService.LoadAsync();
+        await UserSession.LoadAsync();
+        eventItem = EventService.GetEvents().FirstOrDefault(x => x.Id == id);
+    }
+
+    private async Task Submit()
+    {
+        await UserSession.SetUserAsync(registration.Name, registration.Email);
+        if (eventItem is not null)
+        {
+            EventService.RegisterAttendance(eventItem.Id);
+        }
+
+        submitted = true;
+    }
+
+    private class RegistrationModel
+    {
+        [Required(ErrorMessage = "Name is required.")]
+        [StringLength(100, MinimumLength = 2, ErrorMessage = "Name must be at least 2 characters.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
+        public string Email { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,43 @@
+@page "/events/{id:guid}"
+@using EventEaseApp.Data
+@using EventEaseApp.Models
+@inject IEventService EventService
+@inject NavigationManager Nav
+
+@code {
+    [Parameter]
+    public Guid id { get; set; }
+
+    private EventItem? eventItem;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await EventService.LoadAsync();
+        eventItem = EventService.GetEvents().FirstOrDefault(x => x.Id == id);
+    }
+}
+
+<PageTitle>Event Details</PageTitle>
+
+@if (eventItem is null)
+{
+    <div class="container py-4">
+        <div class="alert alert-warning">Event not found.</div>
+        <a class="btn btn-secondary" href="/events">Back to events</a>
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <h1 class="h4">@eventItem.Name</h1>
+        <div class="text-muted mb-2">@eventItem.Date.ToString("f")</div>
+        <div class="mb-3"><strong>Location:</strong> @eventItem.Location</div>
+        <div class="mb-3"><strong>Status:</strong> @(eventItem.IsCompleted ? "Completed" : "Upcoming")</div>
+        <div class="mb-3"><strong>Attendance:</strong> @eventItem.AttendanceCount</div>
+
+        <div class="d-flex gap-2">
+            <a class="btn btn-primary" href="/events/@eventItem.Id/register">Register</a>
+            <a class="btn btn-secondary" href="/events">Back to events</a>
+        </div>
+    </div>
+}

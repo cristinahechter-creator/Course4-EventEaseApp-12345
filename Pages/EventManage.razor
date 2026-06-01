@@ -1,0 +1,203 @@
+@page "/events/manage"
+@using System.ComponentModel.DataAnnotations
+@using EventEaseApp.Data
+@using EventEaseApp.Models
+@inject IEventService EventService
+
+<PageTitle>Manage Events</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="h4">Manage Events</h1>
+            <p class="text-muted">Create, edit, and delete events.</p>
+        </div>
+        <a class="btn btn-outline-secondary mt-3 mt-md-0" href="/events">Back to Events</a>
+    </div>
+
+    <!-- Create New Event Form -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">@(editingId == null ? "Create New Event" : "Edit Event")</h5>
+        </div>
+        <div class="card-body">
+            <EditForm Model="eventModel" OnValidSubmit="SaveEvent">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label" for="eventName">Event Name</label>
+                    <InputText id="eventName" class="form-control" @bind-Value="eventModel.Name" />
+                    <ValidationMessage For="@(() => eventModel.Name)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="eventDate">Date</label>
+                    <InputDate id="eventDate" class="form-control" @bind-Value="eventModel.Date" />
+                    <ValidationMessage For="@(() => eventModel.Date)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="eventLocation">Location</label>
+                    <InputText id="eventLocation" class="form-control" @bind-Value="eventModel.Location" />
+                    <ValidationMessage For="@(() => eventModel.Location)" />
+                </div>
+
+                <div class="mb-3 form-check">
+                    <InputCheckbox id="eventCompleted" class="form-check-input" @bind-Value="eventModel.IsCompleted" />
+                    <label class="form-check-label" for="eventCompleted">Mark as Completed</label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" type="submit">
+                        @(editingId == null ? "Create Event" : "Update Event")
+                    </button>
+                    @if (editingId != null)
+                    {
+                        <button class="btn btn-secondary" type="button" @onclick="CancelEdit">Cancel</button>
+                    }
+                </div>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Events List -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Events (@events.Count)</h5>
+        </div>
+        <div class="card-body">
+            @if (!events.Any())
+            {
+                <div class="alert alert-info">No events yet. Create your first event above.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Date</th>
+                                <th>Location</th>
+                                <th>Attendance</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var e in events)
+                            {
+                                <tr>
+                                    <td>@e.Name</td>
+                                    <td>@e.Date.ToString("MM/dd/yyyy")</td>
+                                    <td>@e.Location</td>
+                                    <td>@e.AttendanceCount</td>
+                                    <td>@(e.IsCompleted ? "Completed" : "Upcoming")</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" @onclick="() => EditEvent(e)">Edit</button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteEventAsync(e.Id)">Delete</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<EventItem> events = Array.Empty<EventItem>();
+    private EventFormModel eventModel = new();
+    private Guid? editingId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await EventService.LoadAsync();
+        events = EventService.GetEvents();
+        EventService.EventsChanged += Refresh;
+    }
+
+    private void SaveEvent()
+    {
+        if (editingId == null)
+        {
+            // Create new event
+            EventService.CreateEvent(eventModel.Name, eventModel.Date, eventModel.Location);
+        }
+        else
+        {
+            // Update existing event
+            var eventItem = events.FirstOrDefault(x => x.Id == editingId);
+            if (eventItem != null)
+            {
+                eventItem.Name = eventModel.Name;
+                eventItem.Date = eventModel.Date;
+                eventItem.Location = eventModel.Location;
+                eventItem.IsCompleted = eventModel.IsCompleted;
+                EventService.UpdateEvent(eventItem);
+            }
+        }
+
+        ResetForm();
+    }
+
+    private async Task DeleteEventAsync(Guid eventId)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this event?"))
+        {
+            EventService.DeleteEvent(eventId);
+        }
+    }
+
+    private void EditEvent(EventItem eventItem)
+    {
+        editingId = eventItem.Id;
+        eventModel.Name = eventItem.Name;
+        eventModel.Date = eventItem.Date;
+        eventModel.Location = eventItem.Location;
+        eventModel.IsCompleted = eventItem.IsCompleted;
+    }
+
+    private void CancelEdit()
+    {
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        editingId = null;
+        eventModel = new EventFormModel();
+    }
+
+    private void Refresh()
+    {
+        events = EventService.GetEvents();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        EventService.EventsChanged -= Refresh;
+    }
+
+    @inject IJSRuntime JS
+
+    private class EventFormModel
+    {
+        [Required(ErrorMessage = "Event name is required.")]
+        [StringLength(100, MinimumLength = 1, ErrorMessage = "Event name must be between 1 and 100 characters.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Range(typeof(DateTime), "1900-01-01", "2099-12-31", ErrorMessage = "Event date must be a valid date.")]
+        public DateTime Date { get; set; } = DateTime.Today;
+
+        [Required(ErrorMessage = "Location is required.")]
+        [StringLength(150, MinimumLength = 1, ErrorMessage = "Location must be between 1 and 150 characters.")]
+        public string Location { get; set; } = string.Empty;
+
+        public bool IsCompleted { get; set; }
+    }
+}
