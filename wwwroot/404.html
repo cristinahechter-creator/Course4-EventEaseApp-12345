@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>EventEaseApp</title>
+    <script type="text/javascript">
+        // Single Page Application redirect for GitHub Pages
+        // This handles client-side routing for Blazor WebAssembly
+        var pathSegments = window.location.pathname.split('/').filter(Boolean);
+        var baseUrl = '/Course4-EventEaseApp-12345';
+        var path = window.location.pathname;
+        
+        // If the path doesn't contain a file extension and isn't the root, 
+        // redirect to index.html to let Blazor handle the routing
+        if (!path.match(/\.[a-z0-9]+$/i) && path !== '/' && path !== baseUrl + '/') {
+            // Remove base path and store the route
+            var route = path.replace(baseUrl, '');
+            window.location.replace(baseUrl + '/?redirect=' + encodeURIComponent(route));
+        }
+    </script>
+</head>
+<body>
+</body>
+</html>
